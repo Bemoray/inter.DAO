@@ -10,7 +10,8 @@ interface IERC20 {
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 }
 
-contract DAO {
+contract interDAO {
+
     address public ceo;
     string public name; // Project name | プロジェクト名
     string public about; // Project description | プロジェクトの説明
@@ -68,21 +69,23 @@ contract DAO {
 	    require(daoToken.balanceOf(msg.sender) >= _pledgeAmount, "Insufficient DAO tokens to pledge"); // 誓約するのに十分なDAOトークンがありません
 	    require(daoToken.transferFrom(msg.sender, address(this), _pledgeAmount), "Token transfer failed"); // トークンの転送が失敗しました
 	
-	    Proposal memory newProposal;
-	    newProposal.proposer = msg.sender;
-	    newProposal.description = _description;
-	    newProposal.data = _data;
-	    newProposal.startBlock = block.number;
-	    newProposal.forVotes = _pledgeAmount; // Set the initial votes to the pledge amount of the proposer.
-	                                         // 初期投票を提案者の誓約額に設定します。
-	    newProposal.status = ProposalStatus.Voting;
-	
-	    proposals.push(newProposal);
-	
-	    uint256 proposalId = proposals.length - 1;
-	    proposals[proposalId].votes[msg.sender] = _pledgeAmount; // Record the vote of the proposer.
-	                                                             // 提案者の投票を記録します。
-	}
+        uint256 newProposalId = proposals.length; // Get the new proposal ID
+        Proposal storage newProposal = proposals[newProposalId]; // Create a new proposal
+
+        newProposal.proposer = msg.sender;
+        newProposal.description = _description;
+        newProposal.data = _data;
+        newProposal.startBlock = block.number;
+        newProposal.forVotes = _pledgeAmount; // Assuming you want the proposer to vote for the proposal
+        newProposal.status = ProposalStatus.Voting;
+
+        newProposal.votes[msg.sender] = _pledgeAmount; // Recording the proposer's vote
+
+        
+        uint256 proposalId = proposals.length - 1;
+        proposals[proposalId].votes[msg.sender] = _pledgeAmount; // Record the vote of the proposer.
+                                                                    // 提案者の投票を記録します。
+     }
 
 
     function vote(uint256 proposalId, bool support, uint256 _pledgeAmount) public {
