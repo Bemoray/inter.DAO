@@ -49,23 +49,41 @@ contract DAO {
         daoToken = _daoToken;
     }
 
-    function createProposal(string memory _description, bytes memory _data) public {
-        IERC20 daoTokenContract = IERC20(daoToken);
-        require(
-            msg.sender == ceo || 
-            daoTokenContract.balanceOf(msg.sender) >= daoTokenContract.totalSupply() / 20,
-            "Permission denied: Insufficient DAO tokens or not the CEO"
-        );
+	// Creates a proposal and automatically casts a supporting vote with the pledged tokens.
+	// 提案を作成し、誓約したトークンで支持票を自動的に投じます。
+	function createProposal(string memory _description, bytes memory _data, uint256 _pledgeAmount) public {
+	    IERC20 daoTokenContract = IERC20(daoToken);
+	    require(
+	        msg.sender == ceo || 
+	        daoTokenContract.balanceOf(msg.sender) >= daoTokenContract.totalSupply() / 20,
+	        "Permission denied: Insufficient DAO tokens or not the owner" // 許可が拒否されました：DAOトークンが不足しているか、オーナーではありません
+	    );
+	
+	    // If the pledge amount is not specified, pledge all tokens of the user.
+	    // 誓約額が指定されていない場合、ユーザーのすべてのトークンを誓約します。
+	    if (_pledgeAmount == 0) {
+	        _pledgeAmount = daoToken.balanceOf(msg.sender);
+	    }
+	
+	    require(daoToken.balanceOf(msg.sender) >= _pledgeAmount, "Insufficient DAO tokens to pledge"); // 誓約するのに十分なDAOトークンがありません
+	    require(daoToken.transferFrom(msg.sender, address(this), _pledgeAmount), "Token transfer failed"); // トークンの転送が失敗しました
+	
+	    Proposal memory newProposal;
+	    newProposal.proposer = msg.sender;
+	    newProposal.description = _description;
+	    newProposal.data = _data;
+	    newProposal.startBlock = block.number;
+	    newProposal.forVotes = _pledgeAmount; // Set the initial votes to the pledge amount of the proposer.
+	                                         // 初期投票を提案者の誓約額に設定します。
+	    newProposal.status = ProposalStatus.Voting;
+	
+	    proposals.push(newProposal);
+	
+	    uint256 proposalId = proposals.length - 1;
+	    proposals[proposalId].votes[msg.sender] = _pledgeAmount; // Record the vote of the proposer.
+	                                                             // 提案者の投票を記録します。
+	}
 
-        Proposal memory newProposal;
-        newProposal.proposer = msg.sender;
-        newProposal.description = _description;
-        newProposal.data = _data;
-        newProposal.startBlock = block.number;
-        newProposal.status = ProposalStatus.Voting;
-
-        proposals.push(newProposal);
-    }
 
     function vote(uint256 proposalId, bool support, uint256 _pledgeAmount) public {
         Proposal storage proposal = proposals[proposalId];
@@ -91,6 +109,7 @@ contract DAO {
     }
 
 	function executeProposal(uint256 proposalId) public onlyDAO {
+
 	    Proposal storage proposal = proposals[proposalId];
 	
 	    require(proposal.status == ProposalStatus.Voting, "Proposal is not in a valid status");
@@ -146,11 +165,11 @@ contract DAO {
 	}
 
 
-    	function updateVariables(address _ceo, string memory _name, string memory _about, IERC20 _daoToken, uint256 _voteDuration) public onlyDAO {
-	        ceo = _ceo;
-	        name = _name;
-	        about = _about;
-	        daoToken = _daoToken;
-	        voteDuration = _voteDuration;
-    	}
+    function updateVariables(address _ceo, string memory _name, string memory _about, IERC20 _daoToken, uint256 _voteDuration) public onlyDAO {
+	    ceo = _ceo;
+	    name = _name;
+	    about = _about;
+	    daoToken = _daoToken;
+	    voteDuration = _voteDuration;
+    }
 }
