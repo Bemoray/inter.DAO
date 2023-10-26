@@ -1,37 +1,49 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+}
 
 contract DAO {
-    address public owner;
-    string public name; 
-    string public about; 
-    IERC20 public daoToken; 
-    uint256 public voteDuration = 300; 
+    address public ceo;
+    string public name; // Project name | プロジェクト名
+    string public about; // Project description | プロジェクトの説明
+    IERC20 public daoToken; // DAO token | DAOトークン
+    uint256 public voteDuration = 300; // Voting duration | 投票期間
 
+    // Proposal statuses | 提案のステータス
     enum ProposalStatus {Voting, Approved, Rejected, PassedButFailed}
 
+	// Proposal structure | 提案の構造
     struct Proposal {
-        address proposer;
-        string description;
-        bytes data;
-        uint256 startBlock;
-        uint256 forVotes;
-        uint256 againstVotes;
-        mapping(address => uint256) votes;
-        ProposalStatus status;
+        address proposer; // Proposer's address | 提案者のアドレス
+        string description; // Proposal description | 提案の説明
+        bytes data; // Proposal data | 提案データ
+        uint256 startBlock; // Start block of the proposal | 提案の開始ブロック
+        uint256 forVotes; // Number of approval votes | 承認投票の数
+        uint256 againstVotes; // Number of rejection votes | 拒否投票の数
+        mapping(address => uint256) votes; // Mapping of voters and their votes | 投票者とその投票のマッピング
+        ProposalStatus status; // Status of the proposal | 提案のステータス
     }
 
-    Proposal[] public proposals;
+    Proposal[] public proposals; // Array of proposals | 提案の配列
 
+    // Modifier to restrict function access | 関数アクセスを制限する修飾子
     modifier onlyDAO() {
         require(msg.sender == address(this), "Not called from this contract");
         _;
     }
 
-    constructor(address _owner, string memory _name, string memory _about, IERC20 _daoToken) {
-        owner = _owner;
+    // Constructor function | コンストラクタ関数
+
+    constructor(string memory _name, string memory _about, IERC20 _daoToken) {
+        ceo = msg.sender;
         name = _name;
         about = _about;
         daoToken = _daoToken;
@@ -40,9 +52,9 @@ contract DAO {
     function createProposal(string memory _description, bytes memory _data) public {
         IERC20 daoTokenContract = IERC20(daoToken);
         require(
-            msg.sender == owner || 
+            msg.sender == ceo || 
             daoTokenContract.balanceOf(msg.sender) >= daoTokenContract.totalSupply() / 20,
-            "Permission denied: Insufficient DAO tokens or not the owner"
+            "Permission denied: Insufficient DAO tokens or not the CEO"
         );
 
         Proposal memory newProposal;
@@ -134,8 +146,8 @@ contract DAO {
 	}
 
 
-    	function updateVariables(address _owner, string memory _name, string memory _about, IERC20 _daoToken, uint256 _voteDuration) public onlyDAO {
-	        owner = _owner;
+    	function updateVariables(address _ceo, string memory _name, string memory _about, IERC20 _daoToken, uint256 _voteDuration) public onlyDAO {
+	        ceo = _ceo;
 	        name = _name;
 	        about = _about;
 	        daoToken = _daoToken;
