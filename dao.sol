@@ -79,41 +79,45 @@ contract DAO {
     }
 
 	function executeProposal(uint256 proposalId) public onlyDAO {
-		Proposal storage proposal = proposals[proposalId];
-
-		require(proposal.status == ProposalStatus.Voting, "Proposal is not in a valid status");
-
-		uint256 totalVotes = proposal.forVotes + proposal.againstVotes;
-
-		if (block.number > proposal.startBlock + voteDuration){
-			if (proposal.forVotes > proposal.againstVotes) {
-				proposal.status = ProposalStatus.Approved;
-				(bool success,) = address(this).call(proposal.data);
-				if (!success) {
-					proposal.status = ProposalStatus.PassedButFailed;
-				}
-			} else {
-				proposal.status = ProposalStatus.Rejected;
-			}
-		} else {
-			if (proposal.forVotes * 2 > totalVotes) {
-					proposal.status = ProposalStatus.Approved;
-						(bool success,) = address(this).call(proposal.data);
-					if (!success) {
-						proposal.status = ProposalStatus.PassedButFailed;
-					}
-			}
-			if (proposal.againstVotes * 2 > totalVotes) {
-				proposal.status = ProposalStatus.Rejected;
-			}
-		}
-		if(proposal.status != ProposalStatus.Voting){
-			returnPledgedTokens(proposalId);
-		}
-
+	    Proposal storage proposal = proposals[proposalId];
+	
+	    require(proposal.status == ProposalStatus.Voting, "Proposal is not in a valid status");
+	
+	    uint256 totalVotes = proposal.forVotes + proposal.againstVotes;
+	
+	    if (block.number > proposal.startBlock + voteDuration){
+	        if (proposal.forVotes > proposal.againstVotes) {
+	            proposal.status = ProposalStatus.Approved;
+	            (bool success,) = address(this).call(proposal.data);
+	            if (!success) {
+	                proposal.status = ProposalStatus.PassedButFailed;
+	            }
+	        } else if (proposal.againstVotes > proposal.forVotes) {
+	            proposal.status = ProposalStatus.Rejected;
+	        }
+	        else {
+	            return;
+	        }
+	    } else {
+	        if (proposal.forVotes * 2 > totalVotes) {
+	            proposal.status = ProposalStatus.Approved;
+	            (bool success,) = address(this).call(proposal.data);
+	            if (!success) {
+	                proposal.status = ProposalStatus.PassedButFailed;
+	            }
+	        }
+	        if (proposal.againstVotes * 2 > totalVotes) {
+	            proposal.status = ProposalStatus.Rejected;
+	        }
+	    }
+	    if(proposal.status != ProposalStatus.Voting){
+	        returnPledgedTokens(proposalId);
+	    }
 	}
+	
 
 	function returnPledgedTokens(uint256 proposalId) public {
+
 		Proposal storage proposal = proposals[proposalId];
 
 		require(proposal.status != ProposalStatus.Voting, "Proposal is still in voting status");
@@ -130,11 +134,11 @@ contract DAO {
 	}
 
 
-    function updateVariables(address _owner, string memory _name, string memory _about, IERC20 _daoToken, uint256 _voteDuration) public onlyDAO {
-        owner = _owner;
-        name = _name;
-        about = _about;
-        daoToken = _daoToken;
-        voteDuration = _voteDuration;
-    }
+    	function updateVariables(address _owner, string memory _name, string memory _about, IERC20 _daoToken, uint256 _voteDuration) public onlyDAO {
+	        owner = _owner;
+	        name = _name;
+	        about = _about;
+	        daoToken = _daoToken;
+	        voteDuration = _voteDuration;
+    	}
 }
